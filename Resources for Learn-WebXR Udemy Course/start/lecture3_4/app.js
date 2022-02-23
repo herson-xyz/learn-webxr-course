@@ -37,6 +37,7 @@ class App{
         this.controls.update();
         
         this.stats = new Stats();
+        document.body.appendChild( this.stats.dom );
         
         this.raycaster = new THREE.Raycaster();
         this.workingMatrix = new THREE.Matrix4();
@@ -77,6 +78,9 @@ class App{
             this.room.add( object );
         }
         
+        this.highlight = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.BackSide } ) );
+        this.highlight.scale.set(1.2, 1.2, 1.2);
+        this.scene.add(this.highlight);
     }
     
     setupXR(){
@@ -84,20 +88,39 @@ class App{
         
         const button = new VRButton( this.renderer );
         
+        const self = this;
+        
         this.controllers = this.buildControllers();
         
+        function onSelectStart() {
+            
+            this.children[0].scale.z = 10;
+            this.userData.selectPressed = true;
+        }
+
+        function onSelectEnd() {
+
+            this.children[0].scale.z = 0;
+            self.highlight.visible = false;
+            this.userData.selectPressed = false;
+            
+        }
+        
+        this.controllers.forEach( (controller) => {
+            controller.addEventListener( 'selectstart', onSelectStart );
+            controller.addEventListener( 'selectend', onSelectEnd );
+        });
+    
     }
     
-    buildControllers(){
+    buildControllers() {
         const controllerModelFactory = new XRControllerModelFactory();
-        
-        const geometry = new THREE.BufferGeometry().setFromPoints( [
-            new THREE.Vector3(0,0,0),
-            new THREE.Vector3(0,0,-1)
-        ]);
+
+        const geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
+
         const line = new THREE.Line( geometry );
         line.name = 'line';
-        line.scale.z = 0;
+		line.scale.z = 0;
         
         const controllers = [];
         
@@ -105,20 +128,38 @@ class App{
             const controller = this.renderer.xr.getController( i );
             controller.add( line.clone() );
             controller.userData.selectPressed = false;
-            this.scene.add(controller);
+            this.scene.add( controller );
             
             controllers.push( controller );
             
             const grip = this.renderer.xr.getControllerGrip( i );
-            grip.add( controllerModelFactory.createControllerModel( grip ));
+            grip.add( controllerModelFactory.createControllerModel( grip ) );
             this.scene.add( grip );
         }
         
         return controllers;
     }
     
+    
     handleController( controller ){
-        
+        if (controller.userData.selectPressed ){
+            controller.children[0].scale.z = 10;
+
+            this.workingMatrix.identity().extractRotation( controller.matrixWorld );
+
+            this.raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
+            this.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( this.workingMatrix );
+
+            const intersects = this.raycaster.intersectObjects( this.room.children );
+
+            if (intersects.length>0){
+                intersects[0].object.add(this.highlight);
+                this.highlight.visible = true;
+                controller.children[0].scale.z = intersects[0].distance;
+            }else{
+                this.highlight.visible = false;
+            }
+        }
     }
     
     resize(){
