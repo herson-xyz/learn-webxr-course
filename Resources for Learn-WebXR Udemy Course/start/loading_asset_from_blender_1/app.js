@@ -106,7 +106,7 @@ class App{
         const loader = new FBXLoader( ).setPath('../../assets/');
         const self = this;
     
-        loader.load( 'low_poly_course_1.fbx', 
+        loader.load( 'egg.fbx', 
             function ( object ) {    
                 self.chair = object;
 
