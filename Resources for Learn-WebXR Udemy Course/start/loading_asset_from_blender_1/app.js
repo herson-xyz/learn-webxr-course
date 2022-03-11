@@ -68,7 +68,7 @@ class App{
 		// Load a glTF resource
 		loader.load(
 			// resource URL
-			'low_poly_course_1.glb',
+			'Geometry_Node_Animation_1.glb',
 			// called when the resource is loaded
 			function ( gltf ) {
                 const bbox = new THREE.Box3().setFromObject( gltf.scene );
